@@ -10,7 +10,8 @@ from torch.optim import Adam
 from torch.nn.modules import loss as nnloss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
-from torch import nn
+from torch import nn, cdist
+from torch_intermediate_layer_getter import IntermediateLayerGetter as MidGetter
 
 from model.networks.inception_siamese_network import (
     get_pretrained_iv3_transforms,
@@ -83,7 +84,6 @@ class QuasiSiameseNetwork(object):
                 n_classes=self.number_classes,
                 freeze=self.freeze,
             )
-
             self.criterion = nnloss.CrossEntropyLoss()
 
         self.transforms = {}
@@ -110,6 +110,7 @@ class QuasiSiameseNetwork(object):
         self.device = args.device
         self.model_path = args.model_path
         self.prediction_path = args.prediction_path
+        self.distance_path = args.distance_path
         self.model_type = args.model_type
         self.is_statistical_model = args.statistical_model
         self.is_neural_model = args.neural_model
@@ -186,6 +187,18 @@ class QuasiSiameseNetwork(object):
             prediction_file = open(prediction_file_path, "w+")
             prediction_file.write("filename label prediction\n")
             return prediction_file
+    #CHANGE SANNE
+    def create_distance_file(self, phase, epoch):
+        
+        distance_file_name = "{}-split_{}-epoch_{:03d}-model_{}-distances.txt".format(
+            self.run_name, phase, epoch, self.model_type
+        )
+        distance_file_path = os.path.join(
+            self.distance_path, distance_file_name
+        )
+        distance_file = open(distance_file_path, "w+")
+        distance_file.write("filename label distance\n")
+        return distance_file
 
     @profile
     def get_outputs_preds(
@@ -194,7 +207,10 @@ class QuasiSiameseNetwork(object):
         if self.probability:
             outputs = nn.functional.softmax(self.model(image1, image2), dim=1).squeeze()
         elif self.is_neural_model:
-            outputs = self.model(image1, image2).squeeze()
+            #CHANGE SANNE
+            #ORIGINAL: outputs, intermediate_results = self.model(image1, image2).squeeze()
+            outputs, intermediate_results = self.model(image1, image2)
+            outputs = outputs.squeeze()
         elif self.model_type == "random":
             output_shape = (
                 random_target_shape
@@ -213,7 +229,7 @@ class QuasiSiameseNetwork(object):
         else:
             preds = outputs.clamp(0, 1)
 
-        return outputs, preds
+        return outputs, preds, intermediate_results #CHANGE SANNE
 
     @profile
     def run_epoch(
@@ -246,6 +262,7 @@ class QuasiSiameseNetwork(object):
         rolling_eval = RollingEval(self.output_type)
 
         prediction_file = self.create_prediction_file(phase, epoch)
+        distance_file = self.create_distance_file(phase, epoch)
 
         if self.model_type == "average":
             self.average_label = self.calculate_average_label(train_set)
@@ -267,11 +284,10 @@ class QuasiSiameseNetwork(object):
                 self.optimizer.zero_grad()
 
             with torch.set_grad_enabled(phase == "train"):
-                outputs, preds = self.get_outputs_preds(
+                outputs, preds, intermediate_results = self.get_outputs_preds( #CHANGE SANNE
                     image1, image2, labels.shape, labels.shape
                 )
                 loss = self.criterion(outputs, labels)
-
                 if phase == "train":
                     loss.backward()
                     self.optimizer.step()
@@ -279,6 +295,16 @@ class QuasiSiameseNetwork(object):
                 if self.probability:
                     output_probability_list.extend(outputs.tolist())
                 else:
+                    #CHANGE SANNE
+                    distance_file.writelines(
+                        [
+                            "{} {} \n".format(*line)
+                            for line in zip(
+                                filename,
+                                intermediate_results.items(), 
+                            )
+                        ]
+                    ) 
                     prediction_file.writelines(
                         [
                             "{} {} {}\n".format(*line)
