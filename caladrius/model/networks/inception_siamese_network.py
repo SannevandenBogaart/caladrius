@@ -256,11 +256,10 @@ class InceptionSiameseNetwork(nn.Module):
         intermediate_results = {}
         x = features
 
-        modules = [module for module in self.similarity.modules() if not isinstance(module, nn.Sequential)]
-        logger.info("getting model layers {}".format(modules))
-        for layer in modules:
-            intermediate_results["{}".format(layer)] = layer(x)
-            x = intermediate_results["{}".format(layer)]
+        modules = [(name, module) for name, module in self.similarity.named_modules() if not isinstance(module, nn.Sequential)]
+        for layer_name, layer in modules:
+            intermediate_results[layer_name] = layer(x)
+            x = intermediate_results[layer_name]
         output = self.output(sim_features)
 
         #CHANGE SANNE
