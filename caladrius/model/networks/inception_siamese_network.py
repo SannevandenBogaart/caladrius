@@ -253,7 +253,11 @@ class InceptionSiameseNetwork(nn.Module):
         features = torch.cat([left_features, right_features], 1)
         sim_features = self.similarity(features)
         #CHANGE SANNE
-        intermediate_results["last_relu"] = sim_features[-3] 
+        intermediate_results = {}
+        x = features
+        for layer_name, layer in self.similarity.named_modules():
+            intermediate_results[layer_name] = layer(x)
+            x = intermediate_results[layer_name]
         output = self.output(sim_features)
 
         #CHANGE SANNE
