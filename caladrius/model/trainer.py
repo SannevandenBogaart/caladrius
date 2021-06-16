@@ -11,7 +11,6 @@ from torch.nn.modules import loss as nnloss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 from torch import nn, cdist
-from torch_intermediate_layer_getter import IntermediateLayerGetter as MidGetter
 
 from model.networks.inception_siamese_network import (
     get_pretrained_iv3_transforms,
