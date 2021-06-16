@@ -84,10 +84,22 @@ def configuration():
 
     # General arguments
     parser.add_argument(
+        "--input-set",
+        type=str,
+        default=os.path.join("."),
+        help="input path",
+    )
+    parser.add_argument(
         "--checkpoint-path",
         type=str,
         default=os.path.join(".", "runs"),
         help="output path",
+    )
+    parser.add_argument(
+        "--distance-path",
+        type=str,
+        default=os.path.join(".","distances"),
+        help="distance path", 
     )
     parser.add_argument(
         "--data-path",
@@ -283,6 +295,9 @@ def configuration():
     )
     arg_vars["prediction_path"] = make_directory(
         os.path.join(arg_vars["checkpoint_path"], "predictions")
+    )
+    arg_vars["distance_path"] = make_directory(
+        os.path.join(arg_vars["distance_path"], "distances")
     )
     arg_vars["model_path"] = os.path.join(
         arg_vars["checkpoint_path"], "best_model_wts.pkl"
