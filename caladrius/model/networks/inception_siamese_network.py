@@ -169,15 +169,15 @@ def get_pretrained_iv3_transforms(set_name, no_augment=False, augment_type="orig
 
 class InceptionSiameseNetwork(nn.Module):
     def __init__(
-        self,
-        output_size=512,
-        similarity_layers_sizes=[512, 512],
-        dropout=0.5,
-        output_type="regression",
-        n_classes=None,
-        freeze=False,
-        #CHANGE SANNE
-        return_intermediate = True 
+            self,
+            output_size=512,
+            similarity_layers_sizes=[512, 512],
+            dropout=0.5,
+            output_type="regression",
+            n_classes=None,
+            freeze=False,
+            # CHANGE SANNE
+            return_intermediate=True
     ):
         """
         Construct the Siamese network
@@ -191,7 +191,6 @@ class InceptionSiameseNetwork(nn.Module):
         self.left_network = get_pretrained_iv3(output_size, freeze)
         self.right_network = get_pretrained_iv3(output_size, freeze)
 
-        #CHANGE SANNE
         similarity_layers = OrderedDict()
 
         # fully connected layer where input is concatenated features of the two inception models
@@ -214,7 +213,7 @@ class InceptionSiameseNetwork(nn.Module):
                 similarity_layers["dropout_{}".format(idx)] = nn.Dropout(
                     dropout, inplace=True
                 )
-        
+
         self.similarity = nn.Sequential(similarity_layers)
         if output_type == "regression":
             # final layer with one output which is the amount of damage from 0 to 1
@@ -222,10 +221,9 @@ class InceptionSiameseNetwork(nn.Module):
         elif output_type == "classification":
             self.output = nn.Linear(hidden, n_classes)
 
-        #CHANGE SANNE
         self.return_intermediate = return_intermediate
 
-    #END
+    # END
     def forward(self, image_1, image_2):
         """
         Define the feedforward sequence
@@ -237,9 +235,6 @@ class InceptionSiameseNetwork(nn.Module):
             Predicted output
         """
 
-        #CHANGE SANNE
-        intermediate_results = {}
-        
         left_features = self.left_network(image_1)
         right_features = self.right_network(image_2)
 
@@ -252,32 +247,32 @@ class InceptionSiameseNetwork(nn.Module):
 
         features = torch.cat([left_features, right_features], 1)
         sim_features = self.similarity(features)
-        #CHANGE SANNE
         intermediate_results = {}
         x = features
-
-        modules = [(name, module) for name, module in self.similarity.named_modules() if not isinstance(module, nn.Sequential)]
+        modules = [(name, module) for name, module in self.similarity.named_modules() if
+                   not isinstance(module, nn.Sequential)]
         for layer_name, layer in modules:
             intermediate_results[layer_name] = layer(x)
             x = intermediate_results[layer_name]
+
+        relu_layer = intermediate_results["relu_1"]
         output = self.output(sim_features)
 
-        #CHANGE SANNE
         if self.return_intermediate:
-            return output, intermediate_results
-        else: 
+            return output, relu_layer
+        else:
             return output
 
 
 class InceptionSiameseShared(nn.Module):
     def __init__(
-        self,
-        output_size=512,
-        similarity_layers_sizes=[512, 512],
-        dropout=0.5,
-        output_type="regression",
-        n_classes=None,
-        freeze=False,
+            self,
+            output_size=512,
+            similarity_layers_sizes=[512, 512],
+            dropout=0.5,
+            output_type="regression",
+            n_classes=None,
+            freeze=False,
     ):
         """
         Construct the Siamese network
